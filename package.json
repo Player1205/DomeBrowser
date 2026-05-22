@@ -1,0 +1,16 @@
+{
+  "name": "dome-browser",
+  "version": "1.0.0",
+  "description": "Dome — A developer-first desktop browser built on Electron",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron ."
+  },
+  "keywords": ["browser", "electron", "developer-tools"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0"
+  }
+}

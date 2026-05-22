@@ -1,0 +1,952 @@
+/**
+ * theme.css — Dome Browser
+ * Full visual design system: color tokens, typography, component skins,
+ * animations, glow effects, and developer-aesthetic details.
+ *
+ * Aesthetic direction: Industrial terminal meets precision instrument.
+ * Sharp edges. Phosphor glow accents. Structured depth without noise.
+ */
+
+/* ─── Google Fonts are loaded in index.html ─────────────────────────────────
+   Oxanium   — UI labels, titles, badges   (weights: 300 400 500 600 700)
+   Fira Code — URLs, code, port numbers    (weights: 300 400 500 600)
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ─── Design Tokens ─────────────────────────────────────────────────────────── */
+
+:root {
+  /* Backgrounds — layered depth system */
+  --bg-void:        #0A0A0D;   /* Deepest: behind sidebar border, shadow fill  */
+  --bg-base:        #0E0E12;   /* App root background                          */
+  --bg-surface:     #13131A;   /* Sidebar, elevated panels                     */
+  --bg-raise:       #191921;   /* Toolbar, tab bar background                  */
+  --bg-lift:        #1F1F2B;   /* Active tabs, hover states                    */
+  --bg-float:       #26263A;   /* Hovered buttons, focused inputs              */
+  --bg-input:       #161620;   /* URL bar, form inputs                         */
+
+  /* Borders */
+  --border-faint:   #1A1A26;   /* Barely visible separators                    */
+  --border-dim:     #222232;   /* Standard dividers                            */
+  --border-mid:     #2E2E44;   /* Active borders, panel edges                  */
+  --border-strong:  #44446A;   /* Focused elements                             */
+
+  /* Text */
+  --text-0:         #F0F0F8;   /* Primary — page titles, active tab names      */
+  --text-1:         #AAAABF;   /* Secondary — inactive tabs, labels            */
+  --text-2:         #676780;   /* Muted — hints, placeholders                  */
+  --text-3:         #3A3A52;   /* Ghost — disabled, backgrounds                */
+
+  /* ── Accent: Electric Cyan ─────────────────────────────────────────────── */
+  /* Used for: active tab indicator, URL bar focus, loading bar, links        */
+  --cyan:           #00C8FF;
+  --cyan-bright:    #40DEFF;
+  --cyan-dim:       rgba(0, 200, 255, 0.12);
+  --cyan-glow:      rgba(0, 200, 255, 0.25);
+  --cyan-border:    rgba(0, 200, 255, 0.35);
+
+  /* ── Accent: Neon Green ─────────────────────────────────────────────────
+     Used for: Local Workspace sidebar border, active localhost status dot   */
+  --green:          #00FF99;
+  --green-bright:   #40FFAA;
+  --green-dim:      rgba(0, 255, 153, 0.08);
+  --green-glow:     rgba(0, 255, 153, 0.2);
+  --green-border:   rgba(0, 255, 153, 0.3);
+
+  /* ── Accent: Violet ─────────────────────────────────────────────────────
+     Used for: Isolated tab badges, isolated tab indicator line              */
+  --violet:         #B388FF;
+  --violet-dim:     rgba(179, 136, 255, 0.12);
+  --violet-glow:    rgba(179, 136, 255, 0.22);
+  --violet-border:  rgba(179, 136, 255, 0.35);
+
+  /* Danger */
+  --red:            #FF5572;
+  --red-dim:        rgba(255, 85, 114, 0.12);
+
+  /* Typography */
+  --font-ui:        'Oxanium', 'Segoe UI', sans-serif;
+  --font-mono:      'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+
+  /* Sizing */
+  --radius-sm:      3px;
+  --radius:         5px;
+  --radius-md:      7px;
+  --radius-lg:      10px;
+
+  /* Transitions */
+  --ease-fast:      0.12s ease;
+  --ease-std:       0.2s ease;
+  --ease-slow:      0.35s ease;
+}
+
+/* ─── Base ──────────────────────────────────────────────────────────────────── */
+
+html {
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-1);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+/* ─── Title Bar ─────────────────────────────────────────────────────────────── */
+
+#title-bar {
+  background: var(--bg-raise);
+  border-bottom: 1px solid var(--border-faint);
+}
+
+#dome-logo {
+  opacity: 0.9;
+}
+
+.logo-hex {
+  color: var(--cyan);
+  filter: drop-shadow(0 0 6px var(--cyan-glow));
+}
+
+.logo-wordmark {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--text-0);
+}
+
+.logo-version {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+  margin-top: 1px;
+}
+
+/* Window control buttons */
+.wc-btn {
+  color: var(--text-2);
+  transition: color var(--ease-fast), background var(--ease-fast);
+}
+
+.wc-btn:hover {
+  color: var(--text-0);
+  background: var(--bg-float);
+}
+
+.wc-btn.wc-close:hover {
+  color: var(--red);
+  background: var(--red-dim);
+}
+
+/* ─── Local Workspace Sidebar ────────────────────────────────────────────────
+   The command center. Left border with neon green glow signals "live systems".
+   ─────────────────────────────────────────────────────────────────────────── */
+
+#local-workspace {
+  background: var(--bg-surface);
+
+  /* The signature feature: a glowing green left border */
+  border-right: 1px solid var(--border-dim);
+  position: relative;
+}
+
+/* Glowing left accent stripe — the "live indicator" */
+#local-workspace::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--green) 20%,
+    var(--green) 80%,
+    transparent 100%
+  );
+  box-shadow: 0 0 12px var(--green-glow), 0 0 24px rgba(0, 255, 153, 0.1);
+  opacity: 0.7;
+  animation: sidebar-pulse 3s ease-in-out infinite;
+}
+
+@keyframes sidebar-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1;   }
+}
+
+.ws-header {
+  border-bottom: 1px solid var(--border-faint);
+}
+
+.ws-header-top {
+  color: var(--green);
+}
+
+.ws-icon {
+  opacity: 0.85;
+}
+
+.ws-title {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--green);
+  text-shadow: 0 0 8px var(--green-glow);
+}
+
+.ws-status {
+  /* nothing extra */
+}
+
+.ws-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-3);
+  display: inline-block;
+  transition: background var(--ease-std), box-shadow var(--ease-std);
+}
+
+.ws-status-dot.active {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green-glow);
+  animation: dot-breathe 2s ease-in-out infinite;
+}
+
+@keyframes dot-breathe {
+  0%, 100% { box-shadow: 0 0 4px var(--green-glow); }
+  50%       { box-shadow: 0 0 10px var(--green-glow), 0 0 20px rgba(0,255,153,0.15); }
+}
+
+.ws-status-text {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-2);
+}
+
+/* Tab items in sidebar */
+.ws-tab-item {
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background var(--ease-fast), border-color var(--ease-fast);
+}
+
+.ws-tab-item:hover {
+  background: var(--green-dim);
+  border-color: var(--green-border);
+}
+
+.ws-tab-item.ws-tab-active {
+  background: var(--green-dim);
+  border-color: var(--green-border);
+}
+
+.ws-tab-item .ws-tab-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-1);
+}
+
+/* Empty state */
+.ws-empty {
+  color: var(--text-3);
+}
+
+.ws-empty p {
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--text-3);
+}
+
+.ws-empty code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--green);
+  opacity: 0.6;
+}
+
+/* Scrollbar within sidebar */
+.ws-tab-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ws-tab-list::-webkit-scrollbar-thumb {
+  background: var(--border-mid);
+  border-radius: 2px;
+}
+
+/* Footer: port badges */
+.ws-port-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--text-3);
+}
+
+.port-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-dim);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: color var(--ease-fast), border-color var(--ease-fast), background var(--ease-fast);
+}
+
+.port-badge:hover {
+  color: var(--green);
+  border-color: var(--green-border);
+  background: var(--green-dim);
+}
+
+/* ─── Toolbar ───────────────────────────────────────────────────────────────── */
+
+#toolbar {
+  background: var(--bg-raise);
+  border-bottom: 1px solid var(--border-faint);
+}
+
+/* Navigation buttons */
+.nav-btn {
+  color: var(--text-2);
+  border-radius: var(--radius);
+  transition: color var(--ease-fast), background var(--ease-fast);
+}
+
+.nav-btn:hover:not(:disabled) {
+  color: var(--text-0);
+  background: var(--bg-float);
+}
+
+.nav-btn:disabled {
+  color: var(--text-3);
+  cursor: default;
+}
+
+/* URL Bar */
+.url-bar-wrap {
+  background: var(--bg-input);
+  border: 1px solid var(--border-dim);
+  transition: border-color var(--ease-std), box-shadow var(--ease-std);
+}
+
+.url-bar-wrap:focus-within {
+  border-color: var(--cyan-border);
+  box-shadow: 0 0 0 2px var(--cyan-dim), inset 0 0 0 1px var(--cyan-border);
+}
+
+.url-scheme {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--cyan);
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.url-divider {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.url-bar {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-0);
+  letter-spacing: 0.01em;
+  caret-color: var(--cyan);
+}
+
+.url-bar::placeholder {
+  color: var(--text-3);
+  font-weight: 300;
+}
+
+.url-bar-loader {
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan-glow);
+}
+
+/* Toolbar action buttons */
+.action-btn {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius);
+  background: var(--bg-lift);
+  transition: color var(--ease-fast), border-color var(--ease-fast),
+              background var(--ease-fast), box-shadow var(--ease-fast);
+}
+
+.action-btn:hover {
+  color: var(--text-0);
+  border-color: var(--border-mid);
+  background: var(--bg-float);
+}
+
+/* Isolated button — distinctly purple */
+.isolated-btn {
+  color: var(--violet);
+  border-color: var(--violet-border);
+  background: var(--violet-dim);
+}
+
+.isolated-btn:hover {
+  color: var(--text-0);
+  border-color: var(--violet);
+  background: rgba(179, 136, 255, 0.2);
+  box-shadow: 0 0 8px var(--violet-glow);
+}
+
+/* ─── Tab Bar ───────────────────────────────────────────────────────────────── */
+
+#tab-bar {
+  background: var(--bg-raise);
+  border-bottom: 1px solid var(--border-faint);
+}
+
+/* Individual tab */
+.tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  transition: background var(--ease-fast), border-color var(--ease-fast);
+}
+
+.tab:hover:not(.tab--active) {
+  background: var(--bg-lift);
+  border-color: var(--border-faint);
+  border-bottom: none;
+}
+
+/* Active standard tab */
+.tab--active {
+  background: var(--bg-base);          /* Matches content area bg — "sits on top" */
+  border-color: var(--border-dim);
+  border-bottom: 1px solid var(--bg-base); /* Merges visually with content area */
+}
+
+.tab--active .tab-active-line {
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan-glow);
+}
+
+/* Isolated tab — violet accent */
+.tab--isolated.tab--active .tab-active-line {
+  background: var(--violet);
+  box-shadow: 0 0 8px var(--violet-glow);
+}
+
+.tab-iso-badge {
+  background: var(--violet-dim);
+  border: 1px solid var(--violet-border);
+  color: var(--violet);
+  font-family: var(--font-mono);
+}
+
+.tab-title {
+  font-family: var(--font-ui);
+  font-weight: 400;
+  color: var(--text-2);
+  transition: color var(--ease-fast);
+}
+
+.tab--active .tab-title {
+  color: var(--text-0);
+  font-weight: 500;
+}
+
+.tab-favicon {
+  color: var(--text-3);
+}
+
+.tab--active .tab-favicon {
+  color: var(--cyan);
+}
+
+.tab--isolated .tab-favicon {
+  color: var(--violet);
+}
+
+.tab-close-btn {
+  color: var(--text-3);
+  border-radius: var(--radius-sm);
+  transition: color var(--ease-fast), background var(--ease-fast);
+}
+
+.tab-close-btn:hover {
+  color: var(--red);
+  background: var(--red-dim);
+}
+
+/* New tab button */
+.new-tab-btn {
+  color: var(--text-2);
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius);
+  transition: color var(--ease-fast), background var(--ease-fast),
+              border-color var(--ease-fast);
+}
+
+.new-tab-btn:hover {
+  color: var(--cyan);
+  background: var(--cyan-dim);
+  border-color: var(--cyan-border);
+}
+
+/* ─── Content Area ──────────────────────────────────────────────────────────── */
+
+#content-area {
+  background: var(--bg-base);
+}
+
+/* ─── New Tab Page ──────────────────────────────────────────────────────────── */
+
+.ntp {
+  background: var(--bg-base);
+  /* Subtle radial glow behind the logo */
+  background-image: radial-gradient(
+    ellipse 60% 40% at 50% 40%,
+    rgba(0, 200, 255, 0.03) 0%,
+    transparent 70%
+  );
+}
+
+/* Logo */
+.ntp-hex {
+  color: var(--cyan);
+  filter: drop-shadow(0 0 16px var(--cyan-glow));
+  animation: hex-rotate 20s linear infinite;
+}
+
+@keyframes hex-rotate {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
+}
+
+.ntp-name {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: var(--text-0);
+}
+
+.ntp-sub {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--text-3);
+  font-weight: 300;
+}
+
+/* NTP URL input */
+.ntp-url-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-0);
+  padding: 0 16px;
+  transition: border-color var(--ease-std), box-shadow var(--ease-std);
+  caret-color: var(--cyan);
+}
+
+.ntp-url-input::placeholder {
+  color: var(--text-3);
+}
+
+.ntp-url-input:focus {
+  border-color: var(--cyan-border);
+  box-shadow: 0 0 0 3px var(--cyan-dim);
+}
+
+/* Quick access section */
+.ntp-section-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--text-3);
+}
+
+.ntp-shortcut {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-md);
+  transition: background var(--ease-std), border-color var(--ease-std),
+              transform 0.15s ease, box-shadow var(--ease-std);
+}
+
+.ntp-shortcut:hover {
+  background: var(--bg-lift);
+  border-color: var(--cyan-border);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 0 12px var(--cyan-dim);
+}
+
+.ntp-shortcut span {
+  font-size: 10px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+}
+
+.shortcut-icon {
+  background: var(--bg-float);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--cyan);
+  letter-spacing: -0.02em;
+  transition: background var(--ease-fast), box-shadow var(--ease-fast);
+}
+
+.ntp-shortcut:hover .shortcut-icon {
+  background: var(--cyan-dim);
+  box-shadow: 0 0 10px var(--cyan-glow);
+}
+
+.ntp-shortcut--add .shortcut-icon {
+  color: var(--text-3);
+  border-style: dashed;
+}
+
+.ntp-shortcut--add:hover .shortcut-icon {
+  color: var(--text-2);
+  background: var(--bg-float);
+  box-shadow: none;
+}
+
+/* System status bar at bottom of NTP */
+.ntp-system-bar {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+.sys-item {
+  transition: color var(--ease-fast);
+}
+
+.sys-item:hover {
+  color: var(--text-2);
+}
+
+.sys-sep {
+  color: var(--border-mid);
+}
+
+/* ─── Scrollbar (global) ─────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-mid);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
+/* ─── Selection ─────────────────────────────────────────────────────────────── */
+
+::selection {
+  background: var(--cyan-dim);
+  color: var(--text-0);
+}
+
+/* ─── Focus Ring ────────────────────────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--cyan-border);
+  outline-offset: 1px;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Micro-interactions & Loading States ────────────────────────────────────── */
+
+/* Tab loading indicator — spinning ring on favicon */
+.tab-favicon.loading {
+  animation: tab-spin 0.8s linear infinite;
+}
+
+@keyframes tab-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Slide-in animation for sidebar workspace tabs */
+.ws-tab-item {
+  animation: ws-tab-enter 0.2s ease both;
+}
+
+@keyframes ws-tab-enter {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   PROMPT 2 ADDITIONS — tabs.js / toolbar.js / workspace.js
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Tab enter / exit animations ──────────────────────────────── */
+
+@keyframes tab-enter {
+  from { opacity: 0; transform: translateY(4px) scaleX(0.92); }
+  to   { opacity: 1; transform: translateY(0)   scaleX(1);    }
+}
+
+@keyframes tab-exit {
+  from { opacity: 1; transform: scaleX(1);    max-width: 220px; }
+  to   { opacity: 0; transform: scaleX(0.85); max-width: 0;     padding: 0; }
+}
+
+/* ─── URL scheme badge variants ──────────────────────────────────
+   Standard = cyan.  http (insecure) = amber.  file: = muted.     */
+
+.url-scheme.scheme-http  { color: #FFAA33; }
+.url-scheme.scheme-local { color: var(--green); text-shadow: 0 0 6px var(--green-glow); }
+.url-scheme.scheme-file  { color: var(--text-3); }
+
+/* ─── Reload button loading state ────────────────────────────────
+   When page is loading, the stop-square icon pulses subtly.       */
+
+.nav-btn.is-loading {
+  color: var(--cyan);
+}
+
+/* ─── Isolated button pulse (on creation confirm) ────────────────*/
+
+@keyframes iso-pulse {
+  0%   { box-shadow: 0 0 0 0   var(--violet-glow); }
+  50%  { box-shadow: 0 0 0 8px var(--violet-glow); }
+  100% { box-shadow: 0 0 0 0   transparent;        }
+}
+
+.btn-pulse {
+  animation: iso-pulse 0.45s ease both;
+}
+
+/* ─── Workspace sidebar tab items ────────────────────────────────*/
+
+.ws-tab-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ws-port-chip {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--green);
+  background: var(--green-dim);
+  border: 1px solid var(--green-border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   PROMPT 3 ADDITIONS — sessions.js / ipcHandlers.js / workspace.js
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Snap animation: tab strip flash ────────────────────────────
+   When a tab is "snapped" into the workspace, its tab-strip element
+   briefly flashes the neon-green accent to signal the move.        */
+
+@keyframes tab-snap-flash {
+  0%   { background: var(--bg-lift);   box-shadow: none;                           }
+  35%  { background: var(--green-dim); box-shadow: 0 0 12px var(--green-glow);     }
+  100% { background: transparent;      box-shadow: none;                           }
+}
+
+.tab-snap-flash {
+  animation: tab-snap-flash 0.55s ease both !important;
+}
+
+/* ─── Snap animation: sidebar item enter ─────────────────────────*/
+
+@keyframes ws-item-enter {
+  from {
+    opacity:   0;
+    transform: translateX(-14px) scaleY(0.9);
+    max-height: 0;
+  }
+  to {
+    opacity:   1;
+    transform: translateX(0)     scaleY(1);
+    max-height: 200px;
+  }
+}
+
+@keyframes ws-item-leave {
+  from { opacity: 1; transform: translateX(0);     max-height: 200px; }
+  to   { opacity: 0; transform: translateX(-12px); max-height: 0; padding: 0; }
+}
+
+.ws-item-entering { animation: ws-item-enter 0.22s cubic-bezier(0.34,1.3,0.64,1) both; }
+.ws-item-leaving  { animation: ws-item-leave 0.18s ease both; overflow: hidden; }
+
+/* ─── Snap animation: sidebar pulse ──────────────────────────────
+   The green accent stripe on the sidebar's left edge pulses once.  */
+
+@keyframes sidebar-snap-pulse {
+  0%   { opacity: 0.7; }
+  40%  { opacity: 1;   box-shadow: 0 0 20px var(--green-glow), 0 0 40px rgba(0,255,153,0.12); }
+  100% { opacity: 0.7; }
+}
+
+#local-workspace.sidebar-snap-pulse::before {
+  animation: sidebar-snap-pulse 0.65s ease both !important;
+}
+
+/* ─── Workspace sidebar card — multi-row layout ──────────────────*/
+
+.ws-tab-item {
+  flex-direction: column;    /* stack rows vertically */
+  align-items: stretch;
+  gap: 4px;
+  padding: 8px 10px;
+}
+
+.ws-tab-main-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+}
+
+.ws-tab-main-row .ws-tab-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-1);
+  transition: color var(--ease-fast);
+}
+
+.ws-tab-item:hover .ws-tab-title,
+.ws-tab-active .ws-tab-title {
+  color: var(--text-0);
+}
+
+/* ─── Isolated session row ───────────────────────────────────────
+   Shows only on localhost tabs that also have a session partition.  */
+
+.ws-session-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px;
+  background: var(--violet-dim);
+  border: 1px solid var(--violet-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.ws-session-icon {
+  color: var(--violet);
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.ws-session-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--violet);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+
+.ws-cookie-count {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ─── Action row (Copy URL / Clear) ─────────────────────────────*/
+
+.ws-action-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ws-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--text-2);
+  background: transparent;
+  border: 1px solid var(--border-faint);
+  cursor: pointer;
+  transition: color var(--ease-fast), background var(--ease-fast),
+              border-color var(--ease-fast);
+}
+
+.ws-copy-btn:hover {
+  color: var(--cyan);
+  background: var(--cyan-dim);
+  border-color: var(--cyan-border);
+}
+
+.ws-clear-btn:hover {
+  color: var(--red);
+  background: var(--red-dim);
+  border-color: rgba(255, 85, 114, 0.3);
+}
+
+.ws-action-btn--success {
+  color: var(--green) !important;
+  background: var(--green-dim) !important;
+  border-color: var(--green-border) !important;
+}
+
+.ws-action-btn:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}

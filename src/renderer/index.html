@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; script-src 'self' 'unsafe-inline';" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dome</title>
+
+  <!-- Typography: Oxanium for UI chrome, Fira Code for URLs & dev data -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&family=Oxanium:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles/theme.css" />
+  <link rel="stylesheet" href="styles/layout.css" />
+</head>
+<body>
+
+  <!-- ════════════════════════════════════════════════════════
+       CUSTOM TITLE BAR
+       Draggable region + Dome logotype + native window controls
+       ════════════════════════════════════════════════════════ -->
+  <header id="title-bar">
+    <div id="title-bar-drag" class="drag-region"></div>
+
+    <div id="dome-logo" class="no-drag">
+      <svg class="logo-hex" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 2L21.5 7.5V16.5L12 22L2.5 16.5V7.5L12 2Z"/>
+      </svg>
+      <span class="logo-wordmark">DOME</span>
+      <span class="logo-version">v1.0</span>
+    </div>
+
+    <div id="window-controls" class="no-drag">
+      <button class="wc-btn" id="btn-minimize" title="Minimize">
+        <svg viewBox="0 0 12 12" width="10" height="10"><line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+      <button class="wc-btn" id="btn-maximize" title="Maximize">
+        <svg viewBox="0 0 12 12" width="10" height="10"><rect x="1.5" y="1.5" width="9" height="9" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+      </button>
+      <button class="wc-btn wc-close" id="btn-close" title="Close">
+        <svg viewBox="0 0 12 12" width="10" height="10"><line x1="1.5" y1="1.5" x2="10.5" y2="10.5" stroke="currentColor" stroke-width="1.5"/><line x1="10.5" y1="1.5" x2="1.5" y2="10.5" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════════════════
+       BROWSER SHELL
+       Left sidebar + right main column
+       ════════════════════════════════════════════════════════ -->
+  <div id="browser-shell">
+
+    <!-- ── LEFT: LOCAL WORKSPACE SIDEBAR ──────────────────── -->
+    <aside id="local-workspace">
+
+      <div class="ws-header">
+        <div class="ws-header-top">
+          <svg class="ws-icon" viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="4" width="16" height="12" rx="2"/>
+            <path d="M6 8h8M6 12h5"/>
+          </svg>
+          <span class="ws-title">LOCAL WORKSPACE</span>
+        </div>
+        <div class="ws-status" id="ws-status">
+          <span class="ws-status-dot" id="ws-dot"></span>
+          <span class="ws-status-text" id="ws-count">0 active</span>
+        </div>
+      </div>
+
+      <!-- Live localhost tabs appear here via workspace.js -->
+      <div class="ws-tab-list" id="ws-tab-list">
+        <div class="ws-empty" id="ws-empty">
+          <svg viewBox="0 0 40 40" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1">
+            <circle cx="20" cy="20" r="14" stroke-dasharray="4 3"/>
+            <path d="M20 12v8l4 4"/>
+          </svg>
+          <p>No localhost tabs</p>
+          <code>localhost:*</code>
+        </div>
+      </div>
+
+      <!-- Port scan widget — will be wired in future prompts -->
+      <div class="ws-footer">
+        <div class="ws-port-row">
+          <span class="ws-port-label">COMMON PORTS</span>
+          <div class="ws-ports">
+            <span class="port-badge" data-port="3000">:3000</span>
+            <span class="port-badge" data-port="5173">:5173</span>
+            <span class="port-badge" data-port="8080">:8080</span>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ── RIGHT: MAIN BROWSER COLUMN ──────────────────────── -->
+    <div id="main-area">
+
+      <!-- ── TOOLBAR ──────────────────────────────────────── -->
+      <div id="toolbar">
+
+        <div class="nav-controls">
+          <button class="nav-btn" id="btn-back" title="Go back" disabled>
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="10,3 5,8 10,13"/>
+            </svg>
+          </button>
+          <button class="nav-btn" id="btn-forward" title="Go forward" disabled>
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6,3 11,8 6,13"/>
+            </svg>
+          </button>
+          <button class="nav-btn" id="btn-reload" title="Reload">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13 3.5A7 7 0 1 0 14 8"/>
+              <polyline points="10,1 14,3.5 11,7"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="url-bar-wrap" id="url-bar-wrap">
+          <span class="url-scheme" id="url-scheme">https</span>
+          <span class="url-divider">://</span>
+          <input
+            type="text"
+            id="url-bar"
+            class="url-bar"
+            placeholder="Search or enter an address"
+            spellcheck="false"
+            autocomplete="off"
+          />
+          <div class="url-bar-loader" id="url-loader"></div>
+        </div>
+
+        <div class="toolbar-actions">
+          <button class="action-btn isolated-btn" id="btn-new-isolated" title="Open Isolated Tab">
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <circle cx="8" cy="8" r="6"/>
+              <circle cx="8" cy="8" r="2.5"/>
+            </svg>
+            <span>ISOLATED</span>
+          </button>
+          <button class="action-btn icon-btn" id="btn-devtools" title="Open DevTools">
+            <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <polyline points="5,4 2,8 5,12"/>
+              <polyline points="11,4 14,8 11,12"/>
+              <line x1="8" y1="3" x2="7" y2="13"/>
+            </svg>
+          </button>
+          <button class="action-btn icon-btn" id="btn-settings" title="Settings">
+            <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <circle cx="8" cy="8" r="2.2"/>
+              <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4"/>
+            </svg>
+          </button>
+        </div>
+
+      </div>
+      <!-- /toolbar -->
+
+      <!-- ── TAB BAR ────────────────────────────────────────── -->
+      <div id="tab-bar">
+        <div class="tab-list" id="tab-list">
+
+          <!-- Standard tab (active) -->
+          <div class="tab tab--active" data-tab-id="tab-1" data-session="default">
+            <div class="tab-active-line"></div>
+            <span class="tab-favicon">
+              <svg viewBox="0 0 12 12" width="10" height="10" fill="currentColor"><circle cx="6" cy="6" r="4"/></svg>
+            </span>
+            <span class="tab-title">New Tab</span>
+            <button class="tab-close-btn" title="Close tab">
+              <svg viewBox="0 0 10 10" width="8" height="8"><line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+          </div>
+
+          <!-- Isolated tab example -->
+          <div class="tab tab--isolated" data-tab-id="tab-2" data-session="isolated">
+            <div class="tab-active-line"></div>
+            <span class="tab-iso-badge">ISO</span>
+            <span class="tab-favicon">
+              <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4"/><circle cx="6" cy="6" r="1.5" fill="currentColor"/></svg>
+            </span>
+            <span class="tab-title">Isolated Session</span>
+            <button class="tab-close-btn" title="Close tab">
+              <svg viewBox="0 0 10 10" width="8" height="8"><line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+          </div>
+
+        </div>
+
+        <button class="new-tab-btn" id="btn-new-tab" title="New Tab">
+          <svg viewBox="0 0 12 12" width="10" height="10"><line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" stroke-width="1.5"/><line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.5"/></svg>
+        </button>
+      </div>
+      <!-- /tab-bar -->
+
+      <!-- ── CONTENT / WEBVIEW AREA ─────────────────────────── -->
+      <div id="content-area">
+
+        <!--
+          The <webview> tag is Electron's sandboxed browser frame.
+          It's shown when a URL is loaded. The NTP overlays it when idle.
+        -->
+        <webview
+          id="main-webview"
+          src="about:blank"
+          class="main-webview"
+          allowpopups
+        ></webview>
+
+        <!-- ── NEW TAB PAGE (NTP) ──────────────────────────── -->
+        <div id="new-tab-page" class="ntp">
+
+          <div class="ntp-inner">
+            <div class="ntp-logo-group">
+              <svg class="ntp-hex" viewBox="0 0 60 60" fill="none" stroke="currentColor" stroke-width="1">
+                <path d="M30 4L55 18V46L30 60L5 46V18L30 4Z"/>
+                <path d="M30 14L46 23V41L30 50L14 41V23L30 14Z" stroke-width="0.5" opacity="0.5"/>
+              </svg>
+              <div class="ntp-wordmark">
+                <span class="ntp-name">DOME</span>
+                <span class="ntp-sub">DEVELOPER BROWSER · v1.0</span>
+              </div>
+            </div>
+
+            <div class="ntp-url-row">
+              <input
+                type="text"
+                class="ntp-url-input"
+                id="ntp-url-input"
+                placeholder="Navigate to a URL or search..."
+                spellcheck="false"
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="ntp-quick-access">
+              <div class="ntp-section-label">QUICK LAUNCH</div>
+              <div class="ntp-shortcuts">
+                <div class="ntp-shortcut" data-url="http://localhost:3000">
+                  <div class="shortcut-icon">:3000</div>
+                  <span>React Dev</span>
+                </div>
+                <div class="ntp-shortcut" data-url="http://localhost:5173">
+                  <div class="shortcut-icon">:5173</div>
+                  <span>Vite</span>
+                </div>
+                <div class="ntp-shortcut" data-url="http://localhost:8080">
+                  <div class="shortcut-icon">:8080</div>
+                  <span>Server</span>
+                </div>
+                <div class="ntp-shortcut" data-url="https://github.com">
+                  <div class="shortcut-icon">GH</div>
+                  <span>GitHub</span>
+                </div>
+                <div class="ntp-shortcut" data-url="https://docs.npmjs.com">
+                  <div class="shortcut-icon">npm</div>
+                  <span>npm Docs</span>
+                </div>
+                <div class="ntp-shortcut ntp-shortcut--add">
+                  <div class="shortcut-icon">+</div>
+                  <span>Add</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ntp-system-bar">
+            <span class="sys-item" id="ntp-electron-ver">ELECTRON</span>
+            <span class="sys-sep">·</span>
+            <span class="sys-item" id="ntp-node-ver">NODE</span>
+            <span class="sys-sep">·</span>
+            <span class="sys-item" id="ntp-chrome-ver">CHROMIUM</span>
+          </div>
+
+        </div>
+        <!-- /ntp -->
+
+      </div>
+      <!-- /content-area -->
+
+    </div>
+    <!-- /main-area -->
+
+  </div>
+  <!-- /browser-shell -->
+
+  <!-- Renderer scripts loaded in order -->
+  <script src="components/tabs.js"></script>
+  <script src="components/toolbar.js"></script>
+  <script src="workspace.js"></script>
+  <script src="renderer.js"></script>
+
+</body>
+</html>
