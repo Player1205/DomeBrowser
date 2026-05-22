@@ -39,15 +39,12 @@ Dome is not a daily driver for reading the news—it is a high-performance works
 
 ### 👥 Instant Multi-Role Testing
 *Test multiple user accounts simultaneously. Different cookies, different storage, same window.*
-<img src="https://via.placeholder.com/600x300/1E293B/39FF14?text=[+INSERT+TAB+ISOLATION+GIF+]" alt="Tab Isolation Demo" width="100%" style="border-radius: 8px;"/>
 
 ### 🌍 The Localhost Hub
 *A completely separate, split-view interface dedicated entirely to your local development ports.*
-<img src="https://via.placeholder.com/600x300/1E293B/7C3AED?text=[+INSERT+LOCALHOST+VIEW+GIF+]" alt="Localhost View Demo" width="100%" style="border-radius: 8px;"/>
 
 ### 🏗️ Advanced Tab Grouping
 *Organize the chaos. Group your backend docs, frontend preview, and database GUI together.*
-<img src="https://via.placeholder.com/600x300/1E293B/F59E0B?text=[+INSERT+TAB+GROUPING+GIF+]" alt="Tab Grouping Demo" width="100%" style="border-radius: 8px;"/>
 
 ---
 
