@@ -59,37 +59,52 @@ window.DomeTabs = (() => {
   let _newTabBtn    = null;   // #btn-new-tab
   let _urlSchemeEl  = null;   // .url-scheme     — "https" badge in toolbar
 
-  // ─── SVG Icon Helpers ───────────────────────────────────────────────────────
+  // ─── Icon / Badge Builders ──────────────────────────────────────────────────
+  // ROOT CAUSE FIX: Never embed SVG strings with double-quote attributes into
+  // innerHTML — the HTML parser treats stroke="currentColor" as attribute
+  // boundaries, injecting stray text nodes before sibling elements.
+  // Solution: build ALL DOM nodes programmatically with createElement.
 
-  /** Default favicon SVG for a standard tab */
-  const SVG_FAVICON_DEFAULT = `
-    <svg viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6">
-      <circle cx="6" cy="6" r="4.5"/>
-    </svg>`;
+  /**
+   * Creates a favicon <span> element for a tab.
+   * Uses a pure CSS dot — no SVG in innerHTML.
+   * @param {boolean} isIsolated
+   * @returns {HTMLSpanElement}
+   */
+  function _makeFaviconEl(isIsolated) {
+    const span = document.createElement('span');
+    span.className = 'tab-favicon';
+    const dot = document.createElement('span');
+    dot.className = 'favicon-dot' + (isIsolated ? ' favicon-dot--iso' : '');
+    span.appendChild(dot);
+    return span;
+  }
 
-  /** Default favicon SVG for an isolated tab (concentric rings) */
-  const SVG_FAVICON_ISOLATED = `
-    <svg viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.5">
-      <circle cx="6" cy="6" r="4.5"/>
-      <circle cx="6" cy="6" r="2" fill="currentColor" stroke="none"/>
-    </svg>`;
-
-  /** Spinning loader SVG shown during page load */
-  const SVG_FAVICON_LOADING = `
-    <svg viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.5"
-         style="animation: tab-spin 0.7s linear infinite; transform-origin: 50% 50%;">
-      <circle cx="6" cy="6" r="4.5" stroke-dasharray="10 8"/>
-    </svg>`;
-
-  /** Close button SVG */
-  const SVG_CLOSE = `
-    <svg viewBox="0 0 10 10" width="8" height="8">
-      <line x1="1.5" y1="1.5" x2="8.5" y2="8.5" stroke="currentColor" stroke-width="1.6"/>
-      <line x1="8.5" y1="1.5" x2="1.5" y2="8.5" stroke="currentColor" stroke-width="1.6"/>
-    </svg>`;
-
-  /** ISO badge element HTML */
-  const HTML_ISO_BADGE = `<span class="tab-iso-badge">ISO</span>`;
+  /**
+   * Creates a close button element using DOM methods (no SVG innerHTML).
+   * @returns {HTMLButtonElement}
+   */
+  function _makeCloseBtn() {
+    const btn = document.createElement('button');
+    btn.className = 'tab-close-btn';
+    btn.title = 'Close tab';
+    // Build SVG via createElementNS — safe, no innerHTML
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 10 10');
+    svg.setAttribute('width', '8');
+    svg.setAttribute('height', '8');
+    const l1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l1.setAttribute('x1', '1.5'); l1.setAttribute('y1', '1.5');
+    l1.setAttribute('x2', '8.5'); l1.setAttribute('y2', '8.5');
+    l1.setAttribute('stroke', 'currentColor'); l1.setAttribute('stroke-width', '1.6');
+    const l2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l2.setAttribute('x1', '8.5'); l2.setAttribute('y1', '1.5');
+    l2.setAttribute('x2', '1.5'); l2.setAttribute('y2', '8.5');
+    l2.setAttribute('stroke', 'currentColor'); l2.setAttribute('stroke-width', '1.6');
+    svg.appendChild(l1); svg.appendChild(l2);
+    btn.appendChild(svg);
+    return btn;
+  }
 
   // ─── Tab Object Factory ──────────────────────────────────────────────────────
 
@@ -141,13 +156,27 @@ window.DomeTabs = (() => {
     el.dataset.tabId = tab.id;
     el.title = tab.title;
 
-    el.innerHTML = `
-      <div class="tab-active-line"></div>
-      ${tab.isIsolated ? HTML_ISO_BADGE : ''}
-      <span class="tab-favicon">${tab.isIsolated ? SVG_FAVICON_ISOLATED : SVG_FAVICON_DEFAULT}</span>
-      <span class="tab-title">${_escapeHtml(tab.title)}</span>
-      <button class="tab-close-btn" title="Close tab">${SVG_CLOSE}</button>
-    `;
+    // Build children via DOM methods — never inline SVG in innerHTML
+    const activeLine = document.createElement('div');
+    activeLine.className = 'tab-active-line';
+    el.appendChild(activeLine);
+
+    if (tab.isIsolated) {
+      const badge = document.createElement('span');
+      badge.className = 'tab-iso-badge';
+      badge.textContent = 'ISO';
+      el.appendChild(badge);
+    }
+
+    el.appendChild(_makeFaviconEl(tab.isIsolated));
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'tab-title';
+    titleSpan.textContent = tab.title;
+    el.appendChild(titleSpan);
+
+    const closeBtn = _makeCloseBtn();
+    el.appendChild(closeBtn);
 
     // ── Click: activate tab ────────────────────────────────────────────────
     el.addEventListener('click', e => {
@@ -165,7 +194,7 @@ window.DomeTabs = (() => {
     });
 
     // ── Close button ───────────────────────────────────────────────────────
-    el.querySelector('.tab-close-btn').addEventListener('click', e => {
+    closeBtn.addEventListener('click', e => {
       e.stopPropagation();
       closeTab(tab.id);
     });
@@ -371,21 +400,40 @@ window.DomeTabs = (() => {
     const faviconEl = tab.tabEl?.querySelector('.tab-favicon');
     if (!faviconEl) return;
 
+    // Clear all existing children safely
+    while (faviconEl.firstChild) faviconEl.removeChild(faviconEl.firstChild);
+
     switch (mode) {
-      case 'loading':
-        faviconEl.innerHTML = SVG_FAVICON_LOADING;
+      case 'loading': {
+        // CSS spinner dot — no SVG needed
+        const dot = document.createElement('span');
+        dot.className = 'favicon-dot favicon-dot--loading';
+        faviconEl.appendChild(dot);
         break;
-      case 'img':
-        faviconEl.innerHTML = `<img src="${imgSrc}" width="12" height="12"
-          style="border-radius:2px; object-fit:contain;"
-          onerror="this.parentElement.innerHTML='${
-            tab.isIsolated ? SVG_FAVICON_ISOLATED.replace(/'/g, '\\x27') : SVG_FAVICON_DEFAULT.replace(/'/g, '\\x27')
-          }'">`;
+      }
+      case 'img': {
+        const img = document.createElement('img');
+        img.className = 'favicon-img';
+        img.width  = 12;
+        img.height = 12;
+        img.src    = imgSrc;
+        img.addEventListener('error', () => {
+          // Fall back to CSS dot on image load failure
+          while (faviconEl.firstChild) faviconEl.removeChild(faviconEl.firstChild);
+          const dot = document.createElement('span');
+          dot.className = 'favicon-dot' + (tab.isIsolated ? ' favicon-dot--iso' : '');
+          faviconEl.appendChild(dot);
+        });
+        faviconEl.appendChild(img);
         break;
+      }
       case 'svg':
-      default:
-        faviconEl.innerHTML = tab.isIsolated ? SVG_FAVICON_ISOLATED : SVG_FAVICON_DEFAULT;
+      default: {
+        const dot = document.createElement('span');
+        dot.className = 'favicon-dot' + (tab.isIsolated ? ' favicon-dot--iso' : '');
+        faviconEl.appendChild(dot);
         break;
+      }
     }
   }
 

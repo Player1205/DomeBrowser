@@ -1,537 +1,204 @@
 /**
  * layout.css — Dome Browser
- * Pure structure: Flexbox & Grid layout, sizing, overflow, fill.
- * No colors. No fonts. No decorative styles.
- * Those live in theme.css.
+ * Pure structural CSS. Zero decoration — that lives in theme.css.
+ * FIXED: removed overflow:hidden from content-area (was clipping GPU compositor layers)
  */
 
-/* ─── Reset & Box Model ────────────────────────────────────────────────────── */
+/* ─── Reset ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html,
-body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;           /* Entire browser shell is fixed in the Electron window */
+html, body {
+  width: 100%; height: 100%;
+  /* overflow:hidden is on body, NOT on content-area — keeps shell fixed
+     while allowing Chromium compositor to paint webview content freely  */
+  overflow: hidden;
 }
 
 button {
-  cursor: pointer;
-  border: none;
-  background: none;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  cursor: pointer; border: none; background: none; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
+input { border: none; outline: none; background: none; width: 100%; }
 
-input {
-  border: none;
-  outline: none;
-  background: none;
-  width: 100%;
-}
-
-/* ─── App Root ─────────────────────────────────────────────────────────────── */
-
+/* ─── App Root ──────────────────────────────────────────────────────────────── */
 body {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  user-select: none;          /* Prevent text selection in chrome UI */
+  display: flex; flex-direction: column;
+  height: 100vh; user-select: none;
 }
 
-/* ─── Title Bar ────────────────────────────────────────────────────────────── */
-
+/* ─── Title Bar ─────────────────────────────────────────────────────────────── */
 #title-bar {
-  height: 38px;
-  min-height: 38px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  position: relative;
-  z-index: 100;
+  height: 38px; min-height: 38px; flex-shrink: 0;
+  display: flex; align-items: center; position: relative; z-index: 100;
 }
-
-/* The draggable region fills the bar but sits below interactive children */
 .drag-region {
-  position: absolute;
-  inset: 0;
+  position: absolute; inset: 0;
   -webkit-app-region: drag;
-  /* Allows the window to be dragged from any non-button area */
 }
-
-.no-drag {
-  -webkit-app-region: no-drag;
-  position: relative;         /* Sits above the drag-region */
-  z-index: 1;
-}
-
-#dome-logo {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0 14px;
-}
-
-#window-controls {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  height: 100%;
-}
-
-.wc-btn {
-  width: 40px;
-  height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+.no-drag { -webkit-app-region: no-drag; position: relative; z-index: 1; }
+#dome-logo { display: flex; align-items: center; gap: 7px; padding: 0 14px; }
+#window-controls { margin-left: auto; display: flex; align-items: center; height: 100%; }
+.wc-btn { width: 40px; height: 38px; display: flex; align-items: center; justify-content: center; }
 
 /* ─── Browser Shell ─────────────────────────────────────────────────────────── */
-
 #browser-shell {
-  flex: 1;
-  display: flex;
-  flex-direction: row;
-  min-height: 0;              /* Critical: allows flex children to shrink below content size */
-  overflow: hidden;
+  flex: 1; display: flex; flex-direction: row;
+  min-height: 0;
+  overflow: hidden; /* shell edges only — does NOT wrap the webview rendering context */
 }
 
-/* ─── Left Sidebar: Local Workspace ────────────────────────────────────────── */
-
+/* ─── Left Sidebar ──────────────────────────────────────────────────────────── */
 #local-workspace {
-  width: 220px;
-  min-width: 220px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  z-index: 10;
+  width: 210px; min-width: 210px; flex-shrink: 0;
+  display: flex; flex-direction: column; overflow: hidden; z-index: 10;
 }
-
-.ws-header {
-  flex-shrink: 0;
-  padding: 14px 14px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ws-header-top {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.ws-status {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding-left: 1px;
-}
-
+.ws-header { flex-shrink: 0; padding: 14px 14px 10px; display: flex; flex-direction: column; gap: 6px; }
+.ws-header-top { display: flex; align-items: center; gap: 7px; }
+.ws-status { display: flex; align-items: center; gap: 5px; padding-left: 1px; }
 .ws-tab-list {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 6px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 6px 8px; display: flex; flex-direction: column; gap: 3px;
 }
-
-/* Scrollbar styling */
-.ws-tab-list::-webkit-scrollbar {
-  width: 4px;
-}
-
+.ws-tab-list::-webkit-scrollbar { width: 4px; }
 .ws-empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 24px 12px;
-  text-align: center;
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px; padding: 24px 12px; text-align: center;
 }
-
-.ws-footer {
-  flex-shrink: 0;
-  padding: 10px 12px 14px;
-}
-
-.ws-port-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ws-ports {
-  display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
-}
-
-/* Workspace tab item (injected by workspace.js) */
+.ws-footer { flex-shrink: 0; padding: 10px 12px 14px; }
+.ws-port-row { display: flex; flex-direction: column; gap: 6px; }
+.ws-ports { display: flex; gap: 5px; flex-wrap: wrap; }
 .ws-tab-item {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 9px;
-  border-radius: 5px;
-  cursor: pointer;
+  display: flex; flex-direction: column; align-items: stretch;
+  gap: 4px; padding: 8px 10px; border-radius: 6px; cursor: pointer;
   overflow: hidden;
 }
-
-.ws-tab-item .ws-tab-title {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.ws-tab-main-row { display: flex; align-items: center; gap: 7px; overflow: hidden; }
+.ws-tab-main-row .ws-tab-title {
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
-/* ─── Main Area (right column) ─────────────────────────────────────────────── */
-
+/* ─── Main Area ─────────────────────────────────────────────────────────────── */
 #main-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;               /* Allow flex child to shrink */
-  overflow: hidden;
+  flex: 1; display: flex; flex-direction: column;
+  min-width: 0;
+  /* NO overflow:hidden here — would block webview compositor */
 }
 
 /* ─── Toolbar ───────────────────────────────────────────────────────────────── */
-
 #toolbar {
-  height: 48px;
-  min-height: 48px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 10px;
-  z-index: 5;
+  height: 48px; min-height: 48px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px; padding: 0 10px; z-index: 5;
 }
-
-.nav-controls {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.nav-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-/* URL bar stretches to fill remaining space */
+.nav-controls { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.nav-btn { width: 30px; height: 30px; border-radius: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .url-bar-wrap {
-  flex: 1;
-  min-width: 0;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 10px;
-  border-radius: 6px;
-  position: relative;
-  overflow: hidden;
+  flex: 1; min-width: 0; height: 32px;
+  display: flex; align-items: center; gap: 4px; padding: 0 10px;
+  border-radius: 8px; position: relative;
 }
-
-.url-bar {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  user-select: text;          /* URL bar IS selectable */
-}
-
+.url-bar { flex: 1; min-width: 0; height: 100%; user-select: text; }
 .url-bar-loader {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 2px;
-  width: 0%;
-  transition: width 0.3s ease, opacity 0.4s ease;
-  border-radius: 1px;
-  opacity: 0;
+  position: absolute; bottom: 0; left: 0; height: 2px; width: 0%;
+  transition: width 0.3s ease, opacity 0.4s ease; border-radius: 1px; opacity: 0;
 }
-
 .url-bar-loader.loading {
-  opacity: 1;
-  animation: loader-sweep 1.4s ease-in-out infinite;
+  opacity: 1; animation: loader-sweep 1.4s ease-in-out infinite;
 }
-
 @keyframes loader-sweep {
-  0%   { left: 0; width: 0%;   }
-  40%  { left: 0; width: 60%;  }
-  80%  { left: 40%; width: 60%; }
-  100% { left: 100%; width: 0%; }
+  0%   { left: 0;    width: 0%;  }
+  40%  { left: 0;    width: 60%; }
+  80%  { left: 40%;  width: 60%; }
+  100% { left: 100%; width: 0%;  }
 }
-
-.toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-}
-
-.action-btn {
-  height: 28px;
-  padding: 0 9px;
-  border-radius: 5px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.icon-btn {
-  width: 30px;
-  padding: 0;
-}
+.toolbar-actions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.action-btn { height: 28px; padding: 0 9px; border-radius: 6px; display: flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap; }
+.icon-btn { width: 30px; padding: 0; }
 
 /* ─── Tab Bar ───────────────────────────────────────────────────────────────── */
-
 #tab-bar {
-  height: 38px;
-  min-height: 38px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-end;      /* Tabs sit flush on the bottom edge */
-  padding: 0 8px 0;
-  gap: 2px;
-  z-index: 4;
-  overflow: hidden;
+  height: 38px; min-height: 38px; flex-shrink: 0;
+  display: flex; align-items: flex-end; padding: 0 8px; gap: 2px; z-index: 4;
 }
-
 .tab-list {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  flex: 1;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  height: 100%;
+  display: flex; align-items: flex-end; gap: 2px;
+  flex: 1; overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none; height: 100%;
 }
-
 .tab-list::-webkit-scrollbar { display: none; }
-
 .tab {
-  height: 34px;
-  min-width: 120px;
-  max-width: 220px;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 10px 0 10px;
-  border-radius: 6px 6px 0 0;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
+  height: 34px; min-width: 120px; max-width: 220px; flex: 1;
+  display: flex; align-items: center; gap: 6px; padding: 0 10px;
+  border-radius: 6px 6px 0 0; cursor: pointer; position: relative; overflow: hidden;
 }
-
 .tab-active-line {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  border-radius: 2px 2px 0 0;
-  transform: scaleX(0);
-  transform-origin: left;
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  border-radius: 3px 3px 0 0; transform: scaleX(0); transform-origin: left;
   transition: transform 0.2s ease;
 }
-
-.tab--active .tab-active-line {
-  transform: scaleX(1);
-}
-
+.tab--active .tab-active-line { transform: scaleX(1); }
 .tab-iso-badge {
-  flex-shrink: 0;
-  padding: 1px 4px;
-  border-radius: 3px;
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  font-weight: 600;
-  line-height: 14px;
+  flex-shrink: 0; padding: 1px 4px; border-radius: 3px;
+  font-size: 9px; letter-spacing: 0.06em; font-weight: 600; line-height: 14px;
 }
-
-.tab-favicon {
-  flex-shrink: 0;
-  width: 14px;
-  height: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tab-title {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-}
-
+.tab-favicon { flex-shrink: 0; width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; }
+.tab-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .tab-close-btn {
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.15s ease;
+  flex-shrink: 0; width: 16px; height: 16px; border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s ease;
 }
-
-.tab:hover .tab-close-btn,
-.tab--active .tab-close-btn {
-  opacity: 1;
-}
-
+.tab:hover .tab-close-btn, .tab--active .tab-close-btn { opacity: 1; }
 .new-tab-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 5px;
-  flex-shrink: 0;
-  margin-bottom: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 28px; height: 28px; border-radius: 5px; flex-shrink: 0;
+  margin-bottom: 3px; display: flex; align-items: center; justify-content: center;
 }
 
 /* ─── Content / Webview Area ────────────────────────────────────────────────── */
 
 #content-area {
   flex: 1;
-  position: relative;         /* Stacking context for webview + NTP overlay */
+  position: relative;
   min-height: 0;
-  overflow: hidden;
+  /* CRITICAL FIX: NO overflow:hidden — it creates a new stacking context that
+     isolates the GPU compositor layer used by <webview>, causing the painted
+     content to be clipped to 0 height in Chromium 120 (Electron 28).
+     Instead we rely on the webview's absolute positioning + parent flex sizing. */
 }
 
-/* The Electron webview fills the entire content area */
+/* Webview fills the content area absolutely */
 .main-webview {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: none;
-  display: block;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  border: none; display: block;
+  /* Force GPU composite layer independently — fixes black tile rendering */
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 /* ─── New Tab Page ──────────────────────────────────────────────────────────── */
-
 .ntp {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: space-between;
   padding: 0 24px 20px;
-  overflow-y: auto;
-  z-index: 2;                 /* Sits above the webview */
+  overflow-y: auto; z-index: 2;
 }
-
 .ntp-inner {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 32px;
-  width: 100%;
-  max-width: 640px;
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 28px; width: 100%; max-width: 640px;
 }
-
-.ntp-logo-group {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-
-.ntp-wordmark {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.ntp-url-row {
-  width: 100%;
-  max-width: 520px;
-}
-
-.ntp-url-input {
-  width: 100%;
-  height: 44px;
-  padding: 0 16px;
-  border-radius: 8px;
-  user-select: text;
-}
-
-.ntp-quick-access {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.ntp-shortcuts {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 10px;
-}
-
-.ntp-shortcut {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 7px;
-  cursor: pointer;
-  padding: 10px 6px;
-  border-radius: 8px;
-}
-
-.shortcut-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-}
-
-.ntp-system-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-}
-
-/* ─── Utility ───────────────────────────────────────────────────────────────── */
-
-/* Show/hide helpers used by renderer.js */
+.ntp-logo-group { display: flex; align-items: center; gap: 18px; }
+.ntp-wordmark { display: flex; flex-direction: column; gap: 3px; }
+.ntp-url-row { width: 100%; max-width: 520px; }
+.ntp-url-input { width: 100%; height: 46px; padding: 0 18px; border-radius: 10px; user-select: text; }
+.ntp-quick-access { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.ntp-shortcuts { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.ntp-shortcut { display: flex; flex-direction: column; align-items: center; gap: 7px; cursor: pointer; padding: 10px 6px; border-radius: 10px; }
+.shortcut-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+.ntp-bg-section { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.ntp-bg-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ntp-bg-hint { font-size: 10px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ntp-system-bar { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
 .hidden { display: none !important; }
-.visible { display: flex !important; }

@@ -1,51 +1,17 @@
 /**
- * ═══════════════════════════════════════════════════════════════
- *  renderer.js — Dome Browser  (Prompt 2: Core Navigation & Tab Logic)
- * ═══════════════════════════════════════════════════════════════
- *
- *  Responsibility:
- *    The central hub of Dome's renderer process.
- *    This file owns NOTHING directly — it orchestrates everything:
- *
- *      DomeTabs     (components/tabs.js)     — tab lifecycle
- *      DomeToolbar  (components/toolbar.js)  — URL bar & nav buttons
- *      DomeWorkspace (workspace.js)          — localhost sidebar
- *
- *  Load order in index.html:
- *    1. tabs.js        → window.DomeTabs
- *    2. toolbar.js     → window.DomeToolbar
- *    3. workspace.js   → window.DomeWorkspace
- *    4. renderer.js    ← this file — runs last, everything is ready
- *
- *  Initialization sequence:
- *    DOMContentLoaded
- *      → DomeToolbar.init()      wire URL bar & nav buttons
- *      → DomeWorkspace.init()    wire sidebar
- *      → DomeTabs.init()         clear static HTML, create first tab
- *      → _bindWindowControls()   title-bar minimize/maximize/close
- *      → _bindGlobalShortcuts()  Ctrl+T, Ctrl+W, Ctrl+L, etc.
- *      → _bindNewTabButton()     "+" button in tab strip
- *      → _bindIsolatedButton()   "ISOLATED" button in toolbar
- *      → _bindNtpShortcuts()     New Tab Page quick-launch grid
- *      → _populateVersionBadges()Electron/Node/Chromium versions
- *
- * ═══════════════════════════════════════════════════════════════
+ * renderer.js — Dome Browser  (Warm Redesign + Background Image Feature)
+ * Central hub: initialises all modules and wires all global interactions.
  */
 
 'use strict';
 
-// ─── Electron APIs ───────────────────────────────────────────────────────────
-// renderer.js runs in the renderer process with nodeIntegration: true,
-// so require() is available.
-
 const { ipcRenderer } = require('electron');
+const path = require('path');
+const fs   = require('fs');
 
-// ─── Initialization ──────────────────────────────────────────────────────────
+// ─── Initialisation ──────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Order matters: Toolbar and Workspace must be ready before Tabs,
-  // because tab creation immediately calls DomeToolbar.setUrl() and
-  // DomeWorkspace.onTabNavigate().
   DomeToolbar.init();
   DomeWorkspace.init();
   DomeTabs.init();
@@ -56,76 +22,57 @@ document.addEventListener('DOMContentLoaded', () => {
   _bindIsolatedTabButton();
   _bindNtpInteractions();
   _bindDevToolsButton();
+  _bindBackgroundImageFeature();
   _populateVersionBadges();
 
-  console.log('[Dome] Renderer initialized ✓');
+  // Restore saved background image from localStorage on startup
+  _restoreBackground();
+
+  console.log('[Dome] Renderer initialised ✓');
 });
 
-// ─── Window Controls (Custom Title Bar) ──────────────────────────────────────
-// We use a frameless Electron window (frame: false) and draw our own
-// title bar in HTML. These buttons communicate with main.js via IPC.
+// ─── Window Controls ─────────────────────────────────────────────────────────
 
 function _bindWindowControls() {
   document.getElementById('btn-minimize')
     ?.addEventListener('click', () => ipcRenderer.send('window:minimize'));
-
   document.getElementById('btn-maximize')
     ?.addEventListener('click', () => ipcRenderer.send('window:maximize'));
-
   document.getElementById('btn-close')
     ?.addEventListener('click', () => ipcRenderer.send('window:close'));
 }
 
 // ─── Global Keyboard Shortcuts ────────────────────────────────────────────────
-// These mirror the keyboard shortcuts developers expect from a real browser.
 
 function _bindGlobalShortcuts() {
   document.addEventListener('keydown', e => {
-    const ctrl = e.ctrlKey || e.metaKey; // Ctrl on Windows/Linux, Cmd on Mac
+    const ctrl = e.ctrlKey || e.metaKey;
 
-    // ── Tab management ───────────────────────────────────────────────────
     if (ctrl && e.key === 't') {
-      // Ctrl+T: new standard tab
       e.preventDefault();
       DomeTabs.createTab({ url: null });
       DomeToolbar.focusUrlBar();
     }
-
     if (ctrl && e.shiftKey && e.key === 'T') {
-      // Ctrl+Shift+T: new isolated tab
       e.preventDefault();
       DomeTabs.createTab({ url: null, isolated: true });
       DomeToolbar.focusUrlBar();
     }
-
     if (ctrl && e.key === 'w') {
-      // Ctrl+W: close current tab
       e.preventDefault();
       const active = DomeTabs.getActiveTab();
       if (active) DomeTabs.closeTab(active.id);
     }
-
-    // ── Navigation bar focus ─────────────────────────────────────────────
     if (ctrl && e.key === 'l') {
-      // Ctrl+L: focus URL bar and select all
       e.preventDefault();
       DomeToolbar.focusUrlBar();
     }
-
-    // ── Tab cycling ──────────────────────────────────────────────────────
     if (ctrl && e.key === 'Tab') {
-      // Ctrl+Tab: cycle to next tab
-      e.preventDefault();
-      _cycleTab(1);
+      e.preventDefault(); _cycleTab(1);
     }
-
     if (ctrl && e.shiftKey && e.key === 'Tab') {
-      // Ctrl+Shift+Tab: cycle to previous tab
-      e.preventDefault();
-      _cycleTab(-1);
+      e.preventDefault(); _cycleTab(-1);
     }
-
-    // ── Hard reload (Ctrl+Shift+R) ────────────────────────────────────────
     if (ctrl && e.shiftKey && e.key === 'R') {
       e.preventDefault();
       DomeTabs.getActiveWebview()?.reloadIgnoringCache();
@@ -133,125 +80,231 @@ function _bindGlobalShortcuts() {
   });
 }
 
-/**
- * Cycles the active tab forward or backward by `direction` (+1 or -1).
- * Wraps around at both ends.
- *
- * @param {number} direction — +1 for next, -1 for previous
- */
 function _cycleTab(direction) {
-  const allTabs = [...DomeTabs.getAllTabs().keys()];
-  if (allTabs.length < 2) return;
-
+  const ids = [...DomeTabs.getAllTabs().keys()];
+  if (ids.length < 2) return;
   const active = DomeTabs.getActiveTab();
   if (!active) return;
-
-  const currentIndex = allTabs.indexOf(active.id);
-  const nextIndex    = (currentIndex + direction + allTabs.length) % allTabs.length;
-  DomeTabs.activateTab(allTabs[nextIndex]);
+  const idx  = ids.indexOf(active.id);
+  const next = (idx + direction + ids.length) % ids.length;
+  DomeTabs.activateTab(ids[next]);
 }
 
 // ─── New Tab Button ───────────────────────────────────────────────────────────
 
 function _bindNewTabButton() {
-  document.getElementById('btn-new-tab')
-    ?.addEventListener('click', () => {
-      DomeTabs.createTab({ url: null });
-      // Auto-focus the URL bar so the user can immediately type
-      DomeToolbar.focusUrlBar();
-    });
+  document.getElementById('btn-new-tab')?.addEventListener('click', () => {
+    DomeTabs.createTab({ url: null });
+    DomeToolbar.focusUrlBar();
+  });
 }
 
 // ─── Isolated Tab Button ──────────────────────────────────────────────────────
-// The "ISOLATED" button in the toolbar opens a new tab with a private
-// in-memory session partition — Dome's core feature #1.
 
 function _bindIsolatedTabButton() {
-  document.getElementById('btn-new-isolated')
-    ?.addEventListener('click', () => {
-      DomeTabs.createTab({ url: null, isolated: true });
-      DomeToolbar.focusUrlBar();
-
-      // Brief visual pulse on the button to confirm creation
-      const btn = document.getElementById('btn-new-isolated');
-      btn?.classList.add('btn-pulse');
-      setTimeout(() => btn?.classList.remove('btn-pulse'), 500);
-    });
+  document.getElementById('btn-new-isolated')?.addEventListener('click', () => {
+    DomeTabs.createTab({ url: null, isolated: true });
+    DomeToolbar.focusUrlBar();
+    const btn = document.getElementById('btn-new-isolated');
+    btn?.classList.add('btn-pulse');
+    setTimeout(() => btn?.classList.remove('btn-pulse'), 500);
+  });
 }
 
 // ─── DevTools Button ─────────────────────────────────────────────────────────
 
 function _bindDevToolsButton() {
-  document.getElementById('btn-devtools')
-    ?.addEventListener('click', () => {
-      const wv = DomeTabs.getActiveWebview();
-      if (!wv) return;
-      if (wv.isDevToolsOpened()) {
-        wv.closeDevTools();
-      } else {
-        wv.openDevTools();
-      }
-    });
+  document.getElementById('btn-devtools')?.addEventListener('click', () => {
+    const wv = DomeTabs.getActiveWebview();
+    if (!wv) return;
+    wv.isDevToolsOpened() ? wv.closeDevTools() : wv.openDevTools();
+  });
 }
 
-// ─── New Tab Page (NTP) Interactions ─────────────────────────────────────────
-// The NTP has its own URL input and a quick-launch shortcut grid.
-// Both navigate the active tab.
+// ─── NTP Interactions ────────────────────────────────────────────────────────
 
 function _bindNtpInteractions() {
-  // ── NTP URL input ─────────────────────────────────────────────────────
+  // Main NTP URL input
   const ntpInput = document.getElementById('ntp-url-input');
-
   ntpInput?.addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
-
-    const raw = ntpInput.value.trim();
-    if (!raw) return;
-
-    const url = DomeToolbar.formatUrl(raw);
+    const url = DomeToolbar.formatUrl(ntpInput.value.trim());
     if (!url) return;
-
     ntpInput.value = '';
     DomeTabs.navigateActiveTab(url);
   });
 
-  // Focus the NTP input automatically when a new (blank) tab is opened.
-  // We observe NTP visibility changes to trigger this.
+  // Auto-focus NTP input when NTP becomes visible
   const ntpEl = document.getElementById('new-tab-page');
   if (ntpEl && ntpInput) {
-    const observer = new MutationObserver(() => {
+    const obs = new MutationObserver(() => {
       if (ntpEl.style.display !== 'none') {
-        // Small delay so the tab-activation animation completes first
         setTimeout(() => ntpInput.focus(), 80);
       }
     });
-    observer.observe(ntpEl, { attributes: true, attributeFilter: ['style'] });
+    obs.observe(ntpEl, { attributes: true, attributeFilter: ['style'] });
   }
 
-  // ── Quick-launch shortcut tiles ───────────────────────────────────────
+  // Quick-launch shortcut tiles
   document.querySelectorAll('.ntp-shortcut[data-url]').forEach(tile => {
     tile.addEventListener('click', () => {
-      const url = tile.dataset.url;
-      if (!url) return;
-      DomeTabs.navigateActiveTab(url);
+      DomeTabs.navigateActiveTab(tile.dataset.url);
     });
   });
 
-  // ── Port badge quick-launch (sidebar footer) ──────────────────────────
-  // Clicking :3000 / :5173 / :8080 badges navigates to that localhost port
+  // Port badges in sidebar footer
   document.querySelectorAll('.port-badge[data-port]').forEach(badge => {
     badge.addEventListener('click', () => {
-      const port = badge.dataset.port;
-      if (!port) return;
-      DomeTabs.navigateActiveTab(`http://localhost:${port}`);
+      DomeTabs.navigateActiveTab(`http://localhost:${badge.dataset.port}`);
     });
   });
 }
 
-// ─── Version Badges (NTP system bar) ─────────────────────────────────────────
-// Reads runtime version strings from Electron's process.versions object
-// and injects them into the NTP's bottom status bar.
+// ─── Background Image Feature ─────────────────────────────────────────────────
+//
+// Architecture:
+//   - User clicks "Choose image" → native file picker opens (hidden <input type=file>)
+//   - Selected file is read as a data URL (base64) using FileReader
+//   - The data URL is stored in localStorage under key "dome-bg-image"
+//     AND in the NTP element's background-image CSS
+//   - A "has-bg" class on .ntp triggers the frosted-glass overlay on .ntp-inner
+//   - "Remove" button clears localStorage and resets the background
+//   - On startup, _restoreBackground() reads localStorage and re-applies it
+//
+// Why data URL and not a file path?
+//   Electron's renderer context can read local files directly with FileReader,
+//   so a data URL is the simplest approach that works cross-platform without
+//   needing extra IPC or the fs module for image rendering.
+
+function _bindBackgroundImageFeature() {
+  const fileInput    = document.getElementById('bg-file-input');
+  const btnSetBg     = document.getElementById('btn-set-bg');
+  const btnRemoveBg  = document.getElementById('btn-remove-bg');
+  const bgHint       = document.getElementById('bg-hint');
+
+  if (!fileInput || !btnSetBg) return;
+
+  // "Choose image" button triggers the hidden file input
+  btnSetBg.addEventListener('click', () => fileInput.click());
+
+  // File selected
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate it's actually an image
+    if (!file.type.startsWith('image/')) {
+      _showBgFeedback('Please choose an image file', 'error');
+      return;
+    }
+
+    // Max 20 MB — larger images can cause localStorage quota errors
+    const MAX_MB = 20;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      _showBgFeedback(`Image must be under ${MAX_MB}MB`, 'error');
+      return;
+    }
+
+    _showBgFeedback('Loading...', 'loading');
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const dataUrl = ev.target.result;
+      _applyBackground(dataUrl);
+
+      // Persist to localStorage so it survives app restarts
+      try {
+        localStorage.setItem('dome-bg-image', dataUrl);
+        localStorage.setItem('dome-bg-name',  file.name);
+      } catch (storageErr) {
+        // localStorage quota exceeded (image too large even after check)
+        console.warn('[Dome] Could not persist background:', storageErr);
+        _showBgFeedback('Image applied but could not be saved (too large)', 'warning');
+        return;
+      }
+
+      const name = file.name.length > 28
+        ? file.name.slice(0, 25) + '...'
+        : file.name;
+      _showBgFeedback(name, 'success');
+    };
+
+    reader.onerror = () => _showBgFeedback('Could not read file', 'error');
+    reader.readAsDataURL(file);
+
+    // Reset the input so the same file can be re-selected
+    fileInput.value = '';
+  });
+
+  // "Remove" button
+  btnRemoveBg?.addEventListener('click', () => {
+    _clearBackground();
+    localStorage.removeItem('dome-bg-image');
+    localStorage.removeItem('dome-bg-name');
+    _showBgFeedback('No background set', 'idle');
+  });
+}
+
+/**
+ * Applies a background image data URL to the NTP.
+ * @param {string} dataUrl
+ */
+function _applyBackground(dataUrl) {
+  const ntp       = document.getElementById('new-tab-page');
+  const btnRemove = document.getElementById('btn-remove-bg');
+
+  if (!ntp) return;
+
+  ntp.style.backgroundImage = `url(${dataUrl})`;
+  ntp.classList.add('has-bg');
+  btnRemove?.classList.remove('hidden');
+}
+
+/**
+ * Removes the background image from the NTP.
+ */
+function _clearBackground() {
+  const ntp       = document.getElementById('new-tab-page');
+  const btnRemove = document.getElementById('btn-remove-bg');
+
+  if (!ntp) return;
+
+  ntp.style.backgroundImage = '';
+  ntp.classList.remove('has-bg');
+  btnRemove?.classList.add('hidden');
+}
+
+/**
+ * Restores a saved background from localStorage on app startup.
+ */
+function _restoreBackground() {
+  const saved     = localStorage.getItem('dome-bg-image');
+  const savedName = localStorage.getItem('dome-bg-name');
+
+  if (!saved) return;
+
+  _applyBackground(saved);
+
+  if (savedName) {
+    const name = savedName.length > 28 ? savedName.slice(0, 25) + '...' : savedName;
+    _showBgFeedback(name, 'success');
+  }
+}
+
+/**
+ * Updates the background hint text and styling.
+ * @param {string} text
+ * @param {'idle'|'loading'|'success'|'error'|'warning'} state
+ */
+function _showBgFeedback(text, state) {
+  const hint = document.getElementById('bg-hint');
+  if (!hint) return;
+  hint.textContent = text;
+  hint.className = 'ntp-bg-hint ntp-bg-hint--' + state;
+}
+
+// ─── Version Badges ───────────────────────────────────────────────────────────
 
 function _populateVersionBadges() {
   const ev = process.versions.electron ?? '?';
@@ -259,7 +312,6 @@ function _populateVersionBadges() {
   const cv = process.versions.chrome   ?? '?';
 
   const el = id => document.getElementById(id);
-
   const elEl = el('ntp-electron-ver');
   const ndEl = el('ntp-node-ver');
   const chEl = el('ntp-chrome-ver');
