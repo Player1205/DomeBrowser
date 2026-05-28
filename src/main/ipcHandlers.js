@@ -356,6 +356,17 @@ function registerHandlers(ipcMain, getMainWindow) {
     return { confirmed: response === 1 };
   });
 
+  // ══════════════════════════════════════════════════════════════
+  //  HISTORY CHANNELS
+  // ══════════════════════════════════════════════════════════════
+
+  ipcMain.handle('history:get-path', async (event) => {
+    const win = getMainWindow();
+    if (!_isTrustedSender(event, win)) return null;
+    const { app } = require('electron');
+    return app.getPath('userData');
+  });
+
   console.log('[DomeIPC] All handlers registered ✓');
 }
 

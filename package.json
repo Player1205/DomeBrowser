@@ -5,7 +5,7 @@
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "NODE_ENV=development electron ."
+    "dev": "set NODE_ENV=development&& electron ."
   },
   "keywords": ["browser", "electron", "developer-tools"],
   "author": "",

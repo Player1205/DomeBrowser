@@ -416,3 +416,120 @@ body { background: var(--bg-content); color: var(--text-body); font-family: var(
 .ws-clear-btn:hover { color: var(--red);  background: var(--red-dim);  border-color: rgba(184,48,48,0.3); }
 .ws-action-btn--success { color: var(--green) !important; background: var(--green-dim) !important; border-color: var(--green-border) !important; }
 .ws-action-btn:disabled { opacity: 0.4; cursor: wait; }
+
+/* ═══ TAB GROUP THEME ══════════════════════════════════════════════════════ */
+
+/* Group color definitions */
+.tab-group[data-color="red"]    { --group-color: #C83030; --group-bg: rgba(200,48,48,0.12); --group-border: rgba(200,48,48,0.35); }
+.tab-group[data-color="orange"] { --group-color: #C86020; --group-bg: rgba(200,96,32,0.12); --group-border: rgba(200,96,32,0.35); }
+.tab-group[data-color="yellow"] { --group-color: #A08010; --group-bg: rgba(160,128,16,0.12); --group-border: rgba(160,128,16,0.35); }
+.tab-group[data-color="green"]  { --group-color: #308830; --group-bg: rgba(48,136,48,0.12); --group-border: rgba(48,136,48,0.35); }
+.tab-group[data-color="cyan"]   { --group-color: #1888A0; --group-bg: rgba(24,136,160,0.12); --group-border: rgba(24,136,160,0.35); }
+.tab-group[data-color="blue"]   { --group-color: #3060C0; --group-bg: rgba(48,96,192,0.12); --group-border: rgba(48,96,192,0.35); }
+.tab-group[data-color="violet"] { --group-color: #7050C8; --group-bg: rgba(112,80,200,0.12); --group-border: rgba(112,80,200,0.35); }
+.tab-group[data-color="pink"]   { --group-color: #C03888; --group-bg: rgba(192,56,136,0.12); --group-border: rgba(192,56,136,0.35); }
+
+.tab-group-header {
+  background: var(--group-bg, rgba(200,80,24,0.12));
+  border: 1.5px solid var(--group-border, var(--border-soft));
+  border-bottom: none;
+  color: var(--group-color, var(--orange));
+  transition: background 0.14s, opacity 0.14s;
+}
+.tab-group-header:hover { opacity: 0.85; }
+.tab-group-label { font-family: var(--font-ui); color: inherit; }
+.tab-group-count { font-family: var(--font-mono); color: inherit; }
+.tab-group-collapse-icon { color: inherit; }
+.tab-group-divider { background: var(--group-border, var(--border-soft)); }
+
+/* Grouped tabs get a subtle bottom border in their group color */
+.tab-group .tab {
+  border-bottom: 2px solid var(--group-border, transparent);
+}
+.tab-group .tab--active {
+  border-bottom: 2px solid var(--bg-window);
+}
+
+/* ═══ TAB CONTEXT MENU THEME ══════════════════════════════════════════════ */
+.tab-context-menu {
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-mid);
+  box-shadow: var(--shadow-lg);
+  font-family: var(--font-ui);
+}
+.ctx-item {
+  color: var(--text-body);
+  font-family: var(--font-ui);
+  transition: background 0.1s, color 0.1s;
+}
+.ctx-item:hover { background: var(--orange-dim); color: var(--text-ink); }
+.ctx-separator { background: var(--border-soft); }
+.ctx-submenu-panel {
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-mid);
+  box-shadow: var(--shadow-lg);
+}
+.ctx-group-name {
+  background: var(--bg-panel);
+  border: 1.5px solid var(--border-soft) !important;
+  font-family: var(--font-ui);
+  color: var(--text-ink);
+}
+.ctx-group-name:focus { border-color: var(--amber-border) !important; }
+
+/* ═══ HISTORY PAGE THEME ══════════════════════════════════════════════════ */
+.history-page { background: var(--bg-content); }
+.history-header { border-bottom: 1.5px solid var(--border-soft); }
+.history-title {
+  font-family: var(--font-ui); font-size: 18px; font-weight: 700;
+  color: var(--text-ink); letter-spacing: 0.04em;
+}
+.history-search {
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-soft);
+  font-family: var(--font-mono);
+  color: var(--text-ink);
+  caret-color: var(--amber);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.history-search::placeholder { color: var(--text-ghost); }
+.history-search:focus {
+  outline: none;
+  border-color: var(--amber-border);
+  box-shadow: 0 0 0 3px var(--amber-dim);
+}
+.history-date-label { color: var(--text-faint); font-family: var(--font-ui); }
+.history-entry {
+  transition: background 0.1s;
+  border: 1px solid transparent;
+}
+.history-entry:hover {
+  background: rgba(255,255,255,0.5);
+  border-color: var(--border-soft);
+}
+.history-entry-title { font-family: var(--font-ui); color: var(--text-body); }
+.history-entry:hover .history-entry-title { color: var(--text-ink); }
+.history-entry-url { font-family: var(--font-mono); color: var(--text-faint); }
+.history-entry-time { font-family: var(--font-mono); color: var(--text-ghost); }
+.history-entry-delete { color: var(--text-faint); }
+.history-entry-delete:hover { color: var(--red); background: var(--red-dim); }
+.history-clear-btn {
+  padding: 6px 14px; border-radius: var(--r);
+  font-family: var(--font-ui); font-size: 11px; font-weight: 600;
+  color: var(--red); border: 1.5px solid rgba(184,48,48,0.3);
+  background: rgba(255,248,235,0.9); cursor: pointer;
+  transition: all 0.14s;
+}
+.history-clear-btn:hover { background: var(--red-dim); border-color: rgba(184,48,48,0.5); }
+.history-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 60px 20px; color: var(--text-faint);
+  font-family: var(--font-ui); font-size: 13px;
+}
+
+/* ═══ SIDEBAR SNAP PULSE (was missing) ════════════════════════════════════ */
+@keyframes sidebar-snap-pulse-anim {
+  0%, 100% { box-shadow: inset -1px 0 0 rgba(255,220,120,0.25), 2px 0 8px rgba(100,50,0,0.10); }
+  40% { box-shadow: inset -1px 0 0 rgba(255,220,120,0.25), 2px 0 8px rgba(100,50,0,0.10), inset 3px 0 0 var(--green-bright); }
+}
+.sidebar-snap-pulse { animation: sidebar-snap-pulse-anim 0.7s ease both; }

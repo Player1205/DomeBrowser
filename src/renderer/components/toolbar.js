@@ -48,9 +48,14 @@ window.DomeToolbar = (() => {
   let _isLoading = false;
 
   /**
-   * Stores the last committed URL so Escape can revert the input.
+   * Stores the last committed display URL (without scheme) so Escape can revert.
    */
   let _committedUrl = '';
+
+  /**
+   * Stores the last committed full URL (with scheme) for navigation.
+   */
+  let _committedFullUrl = '';
 
   // ─── SVG Icons for the Reload/Stop Toggle ────────────────────────────────────
 
@@ -130,8 +135,13 @@ window.DomeToolbar = (() => {
     if (!_schemeEl || !url) return;
 
     let scheme = 'https';
+    let isLocalhost = false;
     try {
-      scheme = new URL(url).protocol.replace(':', '');
+      const parsed = new URL(url);
+      scheme = parsed.protocol.replace(':', '');
+      // Detect localhost by hostname, not by protocol
+      const h = parsed.hostname;
+      isLocalhost = (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0');
     } catch (_) {
       // Malformed URL — show generic scheme
     }
@@ -140,9 +150,9 @@ window.DomeToolbar = (() => {
 
     // Toggle CSS classes for protocol-specific coloring
     _schemeEl.className = 'url-scheme'; // reset
-    if (scheme === 'http')      _schemeEl.classList.add('scheme-http');
-    if (scheme === 'localhost')  _schemeEl.classList.add('scheme-local');
-    if (scheme === 'file')       _schemeEl.classList.add('scheme-file');
+    if (isLocalhost)            _schemeEl.classList.add('scheme-local');
+    else if (scheme === 'http') _schemeEl.classList.add('scheme-http');
+    if (scheme === 'file')      _schemeEl.classList.add('scheme-file');
   }
 
   // ─── URL Bar Event Handlers ──────────────────────────────────────────────────
@@ -150,6 +160,8 @@ window.DomeToolbar = (() => {
   /**
    * Called when the user presses Enter in the URL bar.
    * Formats the raw input and navigates the active tab.
+   * Since the URL bar shows the URL without scheme (e.g. "www.youtube.com"),
+   * formatUrl() will re-apply the appropriate scheme.
    */
   function _onUrlSubmit() {
     const raw = _urlBar.value.trim();
@@ -273,13 +285,35 @@ window.DomeToolbar = (() => {
    * Called by DomeTabs whenever the active webview navigates.
    * Updates the URL bar input value and scheme badge.
    *
+   * The scheme (https://, http://, etc.) is shown in a separate badge
+   * to the left of the input. The input only shows the authority + path
+   * portion to avoid duplication (e.g. "www.youtube.com/" not
+   * "https://www.youtube.com/").
+   *
    * @param {string} url — The URL the active tab is at
    */
   function setUrl(url) {
     if (!_urlBar) return;
-    const display = (url === 'about:blank' || !url) ? '' : url;
+    if (url === 'about:blank' || !url) {
+      _urlBar.value = '';
+      _committedUrl = '';
+      _updateSchemeBadge('');
+      return;
+    }
+
+    // Strip the scheme from the display — the badge handles it
+    let display = url;
+    try {
+      const parsed = new URL(url);
+      // Remove protocol + "//" prefix → show "www.youtube.com/path"
+      display = url.replace(/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//, '');
+    } catch (_) {
+      // Not a valid URL — show as-is
+    }
+
     _urlBar.value = display;
     _committedUrl = display;
+    _committedFullUrl = url; // store full URL for Escape revert
     _updateSchemeBadge(url);
   }
 

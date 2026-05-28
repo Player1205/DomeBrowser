@@ -102,12 +102,22 @@ function _createRecord({ partition, label, persistent, tabId }) {
  * @param {SessionRecord}    record    — Our registry entry for this session
  */
 function _configureSession(ses, record) {
-  // ── Custom User-Agent ──────────────────────────────────────────────────
-  // Append a Dome session tag so developers can see which isolated
-  // session made a request in their server logs.
-  const baseUA = ses.getUserAgent();
-  const taggedUA = `${baseUA} DomeSession/${_sanitizeLabel(record.label)}`;
-  ses.setUserAgent(taggedUA);
+  // ── Clean Chrome User-Agent ────────────────────────────────────────────
+  // Use a standard Chrome UA so sites (especially Google OAuth) do not
+  // detect Electron and block sign-in flows.
+  const chromeVersion = process.versions.chrome;
+  const ua = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`;
+  ses.setUserAgent(ua);
+
+  // ── Permission request handler ─────────────────────────────────────────
+  const allowedPermissions = new Set([
+    'clipboard-read', 'clipboard-sanitized-write', 'media',
+    'geolocation', 'notifications', 'fullscreen', 'pointerLock',
+    'idle-detection', 'storage-access',
+  ]);
+  ses.setPermissionRequestHandler((webContents, permission, callback) => {
+    callback(allowedPermissions.has(permission));
+  });
 
   // ── Request counter (stats) ────────────────────────────────────────────
   // Lightweight: only increments a counter, no request modification.

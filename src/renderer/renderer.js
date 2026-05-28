@@ -14,6 +14,8 @@ const fs   = require('fs');
 document.addEventListener('DOMContentLoaded', () => {
   DomeToolbar.init();
   DomeWorkspace.init();
+  DomeTabGroups.init();
+  DomeHistory.init();
   DomeTabs.init();
 
   _bindWindowControls();
@@ -24,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
   _bindDevToolsButton();
   _bindBackgroundImageFeature();
   _populateVersionBadges();
+  _bindNewWindowFromWebview();
 
   // Restore saved background image from localStorage on startup
   _restoreBackground();
@@ -48,7 +51,7 @@ function _bindGlobalShortcuts() {
   document.addEventListener('keydown', e => {
     const ctrl = e.ctrlKey || e.metaKey;
 
-    if (ctrl && e.key === 't') {
+    if (ctrl && e.key === 't' && !e.shiftKey) {
       e.preventDefault();
       DomeTabs.createTab({ url: null });
       DomeToolbar.focusUrlBar();
@@ -67,11 +70,15 @@ function _bindGlobalShortcuts() {
       e.preventDefault();
       DomeToolbar.focusUrlBar();
     }
-    if (ctrl && e.key === 'Tab') {
-      e.preventDefault(); _cycleTab(1);
+    if (ctrl && e.key === 'h' && !e.shiftKey) {
+      e.preventDefault();
+      DomeHistory.toggle();
     }
+    // Fix: check Shift first to avoid Ctrl+Shift+Tab triggering Ctrl+Tab
     if (ctrl && e.shiftKey && e.key === 'Tab') {
       e.preventDefault(); _cycleTab(-1);
+    } else if (ctrl && e.key === 'Tab') {
+      e.preventDefault(); _cycleTab(1);
     }
     if (ctrl && e.shiftKey && e.key === 'R') {
       e.preventDefault();
@@ -302,6 +309,21 @@ function _showBgFeedback(text, state) {
   if (!hint) return;
   hint.textContent = text;
   hint.className = 'ntp-bg-hint ntp-bg-hint--' + state;
+}
+
+// ─── New Window From Webview (Google OAuth, target="_blank") ─────────────
+
+function _bindNewWindowFromWebview() {
+  ipcRenderer.on('new-window-from-webview', (event, url) => {
+    if (url && typeof url === 'string') {
+      // Open popup URLs as new Dome tabs
+      const activeTab = DomeTabs.getActiveTab();
+      DomeTabs.createTab({
+        url,
+        isolated: activeTab?.isIsolated || false,
+      });
+    }
+  });
 }
 
 // ─── Version Badges ───────────────────────────────────────────────────────────

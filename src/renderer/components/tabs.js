@@ -38,6 +38,8 @@ window.DomeTabs = (() => {
 
   // ─── Private State ─────────────────────────────────────────────────────────
 
+  const { ipcRenderer } = require('electron');
+
   /**
    * Master tab registry.
    * Key: tabId (string), Value: TabObject (see _createTabObject)
@@ -130,8 +132,8 @@ window.DomeTabs = (() => {
       canGoForward: false,
 
       // Electron session partition name.
-      // Non-persist: partitions are purely in-memory — nothing shared.
-      partition: isolated ? `isolated-${id}-${Date.now()}` : null,
+      // Will be set via IPC for isolated tabs.
+      partition: null,
 
       // DOM references — set after elements are built
       tabEl: null,
@@ -201,6 +203,15 @@ window.DomeTabs = (() => {
 
     // Enter with a slide-in animation
     el.style.animation = 'tab-enter 0.15s ease both';
+
+    // ── Right-click: context menu ───────────────────────────────────────────
+    el.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof DomeTabGroups !== 'undefined') {
+        DomeTabGroups.showContextMenu(tab.id, e.clientX, e.clientY);
+      }
+    });
 
     return el;
   }
@@ -353,13 +364,10 @@ window.DomeTabs = (() => {
     });
 
     // ── New window requested (target="_blank", window.open, etc.) ──────────
-    // Instead of opening in the OS default browser, open a new Dome tab
-    wv.addEventListener('new-window', e => {
-      e.preventDefault();
-
-      // Inherit isolation from parent tab so auth context is preserved
-      createTab({ url: e.url, isolated: tab.isIsolated });
-    });
+    // NOTE: The deprecated 'new-window' event is no longer used.
+    // Popup handling is done at the main process level via
+    // contents.setWindowOpenHandler() in main.js, which sends
+    // 'new-window-from-webview' IPC to the renderer.
 
     // ── DOM ready — webview is interactive ─────────────────────────────────
     wv.addEventListener('dom-ready', () => {
@@ -367,6 +375,18 @@ window.DomeTabs = (() => {
       _syncNavState(tab);
       if (_activeTabId === tab.id) {
         DomeToolbar?.setNavState(tab.canGoBack, tab.canGoForward);
+      }
+    });
+
+    // ── did-finish-load: record in history ─────────────────────────────────
+    wv.addEventListener('did-finish-load', () => {
+      const url = wv.getURL?.() || '';
+      if (url && url !== 'about:blank' && typeof DomeHistory !== 'undefined') {
+        DomeHistory.addEntry({
+          url,
+          title:   tab.title || url,
+          favicon: tab.favicon || null,
+        });
       }
     });
   }
@@ -503,13 +523,33 @@ window.DomeTabs = (() => {
    * @param {boolean} [opts.isolated] — Whether to create an isolated session.
    * @returns {TabObject} The newly created tab
    */
-  function createTab({ url = null, isolated = false } = {}) {
+  async function createTab({ url = null, isolated = false } = {}) {
     // Generate a stable, unique ID
     _tabCounter++;
     const id = `tab-${_tabCounter}-${Date.now()}`;
 
     // Build the state object
     const tab = _createTabObject({ id, url, isolated });
+
+    // For isolated tabs, register the session via IPC
+    // so main process tracks it properly (sessions.js registry)
+    if (isolated) {
+      try {
+        const result = await ipcRenderer.invoke('session:create', {
+          tabId: id,
+          label: `Isolated ${_tabCounter}`,
+          persist: false,
+        });
+        if (result?.ok && result.partition) {
+          tab.partition = result.partition;
+        } else {
+          // Fallback: create partition client-side
+          tab.partition = `isolated-${id}-${Date.now()}`;
+        }
+      } catch (_) {
+        tab.partition = `isolated-${id}-${Date.now()}`;
+      }
+    }
 
     // Build and mount DOM elements
     tab.tabEl     = _buildTabEl(tab);
@@ -525,9 +565,13 @@ window.DomeTabs = (() => {
     _tabListEl?.appendChild(tab.tabEl);
 
     // Notify workspace so it can wire did-finish-load on this webview
-    // (Prompt 3: Smart Auto Grouping hook)
     if (typeof DomeWorkspace !== 'undefined') {
       DomeWorkspace.onTabCreated(id);
+    }
+
+    // Re-render tab groups if they exist
+    if (typeof DomeTabGroups !== 'undefined') {
+      DomeTabGroups.renderGroups();
     }
 
     // Activate this new tab (shows its webview, hides NTP or others)
@@ -587,6 +631,11 @@ window.DomeTabs = (() => {
     if (typeof DomeWorkspace !== 'undefined') {
       DomeWorkspace.refreshActiveHighlight?.();
     }
+
+    // Hide history page if visible
+    if (typeof DomeHistory !== 'undefined' && DomeHistory.isVisible()) {
+      DomeHistory.hide();
+    }
   }
 
   /**
@@ -604,8 +653,23 @@ window.DomeTabs = (() => {
 
     const wasActive = _activeTabId === id;
 
+    // BUG FIX: Determine the next tab to activate BEFORE deleting from _tabs.
+    // Previously, _tabs.delete(id) was called first, so _getNextActiveId()
+    // couldn't find the closed tab's position and always returned null.
+    const nextId = wasActive ? _getNextActiveId(id) : null;
+
     // Notify workspace before removal
     DomeWorkspace?.onTabClose(id);
+
+    // Notify tab groups
+    if (typeof DomeTabGroups !== 'undefined') {
+      DomeTabGroups.onTabClosed(id);
+    }
+
+    // Destroy isolated session via IPC
+    if (tab.isIsolated && tab.partition) {
+      ipcRenderer.send('session:destroy', tab.partition);
+    }
 
     // Remove tab strip element with a slide-out animation
     if (tab.tabEl) {
@@ -614,25 +678,27 @@ window.DomeTabs = (() => {
     }
 
     // Destroy the webview — releases all memory and session data
-    // (for isolated tabs this means the session jar is gone forever)
     if (tab.webviewEl) {
       tab.webviewEl.remove();
     }
 
-    // Remove from registry
+    // Remove from registry (AFTER determining nextId)
     _tabs.delete(id);
 
     // ── Rebalance active tab ─────────────────────────────────────────────
     if (wasActive) {
-      const nextId = _getNextActiveId(id);
-
-      if (nextId) {
+      if (nextId && _tabs.has(nextId)) {
         activateTab(nextId);
       } else {
         // No tabs left — open a clean new tab
         _activeTabId = null;
         createTab({ url: null });
       }
+    }
+
+    // Re-render tab groups
+    if (typeof DomeTabGroups !== 'undefined') {
+      DomeTabGroups.renderGroups();
     }
   }
 
@@ -654,6 +720,11 @@ window.DomeTabs = (() => {
     // Always hide NTP and show webview when navigating
     if (_ntpEl)          _ntpEl.style.display = 'none';
     if (tab.webviewEl)   tab.webviewEl.style.display = 'block';
+
+    // Hide history page if visible
+    if (typeof DomeHistory !== 'undefined' && DomeHistory.isVisible()) {
+      DomeHistory.hide();
+    }
   }
 
   // ─── Getters ──────────────────────────────────────────────────────────────────

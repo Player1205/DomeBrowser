@@ -11,7 +11,7 @@
 
 'use strict';
 
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
 
 // ─── Import our modules ───────────────────────────────────────────────────────
@@ -58,10 +58,45 @@ function createWindow() {
 // ─── App Lifecycle ────────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {
+  // ── Set a clean Chrome User-Agent on the default session ──────────────
+  // Prevents sites (especially Google OAuth) from detecting Electron.
+  const defaultSession = session.defaultSession;
+  const chromeVersion = process.versions.chrome;
+  const ua = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`;
+  defaultSession.setUserAgent(ua);
+
   createWindow();
 
   // Register all developer-feature IPC handlers (sessions, system, dialogs)
   registerHandlers(ipcMain, getMainWindow);
+
+  // ── Intercept popups & set permissions for all webContents ────────────
+  // This covers webview contents created at any time.
+  app.on('web-contents-created', (_event, contents) => {
+    // Intercept window.open / target="_blank" inside webviews
+    contents.setWindowOpenHandler(({ url }) => {
+      if (mainWindow && url && url !== 'about:blank') {
+        mainWindow.webContents.send('new-window-from-webview', url);
+      }
+      return { action: 'deny' };
+    });
+
+    // Set permission request handler on the session of each webContents
+    const ses = contents.session;
+    if (ses) {
+      const allowedPermissions = new Set([
+        'clipboard-read', 'clipboard-sanitized-write', 'media',
+        'geolocation', 'notifications', 'fullscreen', 'pointerLock',
+      ]);
+      ses.setPermissionRequestHandler((_wc, permission, callback) => {
+        if (permission === 'openExternal') {
+          callback(false);
+        } else {
+          callback(allowedPermissions.has(permission));
+        }
+      });
+    }
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
