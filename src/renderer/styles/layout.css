@@ -166,14 +166,29 @@ body {
 }
 
 /* Webview fills the content area absolutely */
+/* CRITICAL: Never use display:none on webviews — in Electron 28 / Chromium 120,
+   display:none destroys the GPU compositor layer. When the webview is re-shown,
+   the content fails to re-render (pages load their structure but JavaScript
+   content like search results, videos, etc. remain blank).
+   Instead, ALL webviews stay display:block and we use visibility + z-index
+   to show/hide them. This keeps the compositor layer alive at all times. */
 .main-webview {
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
   border: none; display: block;
+  /* Hidden by default — webview--active class makes it visible */
+  visibility: hidden;
+  z-index: 0;
+  pointer-events: none;
   /* Force GPU composite layer independently — fixes black tile rendering */
   transform: translateZ(0);
   will-change: transform;
+}
+.main-webview.webview--active {
+  visibility: visible;
+  z-index: 1;
+  pointer-events: auto;
 }
 
 /* ─── New Tab Page ──────────────────────────────────────────────────────────── */

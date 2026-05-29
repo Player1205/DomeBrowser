@@ -15,7 +15,7 @@
  *    Chrome keeps every tab's browsing context alive in memory.
  *    We do the same: each <webview> is injected into #content-area
  *    and kept alive but hidden (display:none) when not active.
- *    Only the active tab's webview is visible (display:block).
+ *    Only the active tab's webview is visible (via webview--active class).
  *    This preserves page state (scroll position, form data, etc.)
  *    when switching tabs, just like a real browser.
  *
@@ -244,8 +244,11 @@ window.DomeTabs = (() => {
     // Set initial URL (blank if opening a New Tab Page)
     wv.src = tab.url || 'about:blank';
 
-    // Hidden by default — activateTab() will make it visible
-    wv.style.display = 'none';
+    // IMPORTANT: We do NOT use display:none to hide inactive webviews.
+    // In Electron 28 / Chromium 120, display:none destroys the GPU compositor
+    // layer, and when re-shown the page content fails to re-render.
+    // Instead, we use a CSS class (webview--active) that controls
+    // visibility + z-index. All webviews stay display:block at all times.
 
     // Mount into the content area (behind the NTP overlay)
     _contentEl.appendChild(wv);
@@ -387,6 +390,27 @@ window.DomeTabs = (() => {
           title:   tab.title || url,
           favicon: tab.favicon || null,
         });
+      }
+    });
+
+    // ── did-fail-load: handle page load errors ────────────────────────────
+    wv.addEventListener('did-fail-load', (e) => {
+      // Ignore aborted loads (user navigated away, tab closed, etc.)
+      // Error code -3 is ERR_ABORTED, which is normal during navigation
+      if (e.errorCode === -3) return;
+
+      console.warn(`[DomeTabs] Load failed for tab ${tab.id}: ${e.errorCode} ${e.errorDescription} — ${e.validatedURL}`);
+
+      tab.isLoading = false;
+      if (_activeTabId === tab.id) {
+        DomeToolbar?.setLoading(false);
+      }
+
+      // Update tab title to show the error
+      if (e.isMainFrame) {
+        tab.title = `Error: ${e.errorDescription || 'Page load failed'}`;
+        const titleEl = tab.tabEl?.querySelector('.tab-title');
+        if (titleEl) titleEl.textContent = tab.title;
       }
     });
   }
@@ -598,7 +622,8 @@ window.DomeTabs = (() => {
     // ── Deactivate all tabs ──────────────────────────────────────────────
     _tabs.forEach(t => {
       t.tabEl?.classList.remove('tab--active');
-      if (t.webviewEl) t.webviewEl.style.display = 'none';
+      // Use class toggle instead of display:none — see _buildWebviewEl comment
+      if (t.webviewEl) t.webviewEl.classList.remove('webview--active');
     });
 
     // ── Activate this tab ────────────────────────────────────────────────
@@ -608,7 +633,9 @@ window.DomeTabs = (() => {
     const isNtp = !tab.url || tab.url === 'about:blank';
 
     if (tab.webviewEl) {
-      tab.webviewEl.style.display = isNtp ? 'none' : 'block';
+      if (!isNtp) {
+        tab.webviewEl.classList.add('webview--active');
+      }
     }
 
     if (_ntpEl) {
@@ -719,7 +746,7 @@ window.DomeTabs = (() => {
 
     // Always hide NTP and show webview when navigating
     if (_ntpEl)          _ntpEl.style.display = 'none';
-    if (tab.webviewEl)   tab.webviewEl.style.display = 'block';
+    if (tab.webviewEl)   tab.webviewEl.classList.add('webview--active');
 
     // Hide history page if visible
     if (typeof DomeHistory !== 'undefined' && DomeHistory.isVisible()) {

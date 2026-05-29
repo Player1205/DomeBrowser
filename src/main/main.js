@@ -70,10 +70,14 @@ app.whenReady().then(() => {
   // Register all developer-feature IPC handlers (sessions, system, dialogs)
   registerHandlers(ipcMain, getMainWindow);
 
-  // ── Intercept popups & set permissions for all webContents ────────────
-  // This covers webview contents created at any time.
+  // ── Intercept popups & set permissions for webview contents ─────────
+  // Only applies to webview guest contents, NOT the main shell window.
   app.on('web-contents-created', (_event, contents) => {
+    // Skip the main window — only handle webview guests
+    if (contents.getType() !== 'webview') return;
+
     // Intercept window.open / target="_blank" inside webviews
+    // Routes popup URLs back to renderer to open as new Dome tabs
     contents.setWindowOpenHandler(({ url }) => {
       if (mainWindow && url && url !== 'about:blank') {
         mainWindow.webContents.send('new-window-from-webview', url);
@@ -81,19 +85,16 @@ app.whenReady().then(() => {
       return { action: 'deny' };
     });
 
-    // Set permission request handler on the session of each webContents
+    // Set permission request handler on webview sessions
     const ses = contents.session;
     if (ses) {
       const allowedPermissions = new Set([
         'clipboard-read', 'clipboard-sanitized-write', 'media',
         'geolocation', 'notifications', 'fullscreen', 'pointerLock',
+        'idle-detection', 'storage-access',
       ]);
       ses.setPermissionRequestHandler((_wc, permission, callback) => {
-        if (permission === 'openExternal') {
-          callback(false);
-        } else {
-          callback(allowedPermissions.has(permission));
-        }
+        callback(allowedPermissions.has(permission));
       });
     }
   });
